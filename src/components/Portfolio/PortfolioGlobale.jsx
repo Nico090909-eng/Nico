@@ -8,7 +8,7 @@ import {
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
 
-export default function PortfolioGlobale({ portfolio }) {
+export default function PortfolioGlobale({ portfolio, onBucketClick }) {
   const positions = portfolio?.positions || []
 
   const buckets = useMemo(() => positions.reduce((acc, p) => {
@@ -145,26 +145,42 @@ export default function PortfolioGlobale({ portfolio }) {
         </div>
       </div>
 
-      {/* Bucket cards */}
+      {/* Bucket cards — clickable → Positions */}
       <div className="section">
-        <div className="section-title">Détail par bucket</div>
+        <div className="section-title">Détail par bucket <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>— cliquez pour voir les positions</span></div>
         <div className="grid-3">
           {BUCKET_ORDER.map(key => {
             const val  = buckets[key] || 0
             const cost = costBuckets[key] || 0
             const pnl  = val - cost
-            const pnlPct = cost > 0 ? (pnl / cost) * 100 : 0
-            const pct    = totalValue > 0 ? (val / totalValue) * 100 : 0
+            const pnlPct  = cost > 0 ? (pnl / cost) * 100 : 0
+            const pct     = totalValue > 0 ? (val / totalValue) * 100 : 0
             const isSavings = key === 'savings'
             return (
-              <div key={key} className="card" style={{ borderLeft: `3px solid ${BUCKET_COLORS[key]}` }}>
-                <div className="card-title" style={{ color: BUCKET_COLORS[key] }}>
-                  {BUCKET_META[key].emoji} {BUCKET_META[key].label}
+              <div
+                key={key}
+                className="card"
+                onClick={() => onBucketClick?.(key)}
+                style={{
+                  borderLeft: `3px solid ${BUCKET_COLORS[key]}`,
+                  cursor: 'pointer',
+                  transition: 'transform 0.15s, box-shadow 0.15s, border-color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 6px 24px ${BUCKET_COLORS[key]}22` }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <div className="card-title" style={{ color: BUCKET_COLORS[key], marginBottom: 0 }}>
+                    {BUCKET_META[key].emoji} {BUCKET_META[key].label}
+                  </div>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>
+                    Voir →
+                  </span>
                 </div>
                 <div style={{ fontSize: '1.4rem', fontWeight: 700, fontFamily: 'var(--font-mono)', marginBottom: '0.25rem' }}>
                   {fmtEur(val)}
                 </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
                   {pct.toFixed(1)}% du total
                 </div>
                 {!isSavings && (
