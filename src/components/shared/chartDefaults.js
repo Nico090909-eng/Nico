@@ -99,6 +99,7 @@ export const CATEGORY_EMOJIS = {
   Vêtements: '👕',
   Voyages: '✈️',
   Abonnements: '📱',
+  Investissement: '📈',
   Autre: '💡',
 }
 
