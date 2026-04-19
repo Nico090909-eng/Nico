@@ -1,71 +1,52 @@
-export const darkGridPlugin = {
-  id: 'darkGrid',
+const TIP = {
+  backgroundColor: '#0d0d16',
+  borderColor: 'rgba(255,255,255,0.08)',
+  borderWidth: 1,
+  titleColor: '#ededf5',
+  bodyColor: '#60607e',
+  titleFont: { family: "'Syne', sans-serif", size: 12, weight: '700' },
+  bodyFont:  { family: "'Space Mono', monospace", size: 11 },
+  padding: 12,
+  cornerRadius: 10,
+  displayColors: true,
+  boxWidth: 8,
+  boxHeight: 8,
+}
+
+const LEG = {
+  labels: {
+    color: '#60607e',
+    font: { family: "'Space Mono', monospace", size: 10 },
+    boxWidth: 8, boxHeight: 8,
+    padding: 14,
+    usePointStyle: true,
+  },
+}
+
+const AXIS_X = {
+  ticks: { color: '#60607e', font: { family: "'Space Mono', monospace", size: 9 }, maxRotation: 0 },
+  grid:  { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+  border:{ color: 'rgba(255,255,255,0.06)' },
+}
+const AXIS_Y = {
+  ticks: { color: '#60607e', font: { family: "'Space Mono', monospace", size: 9 } },
+  grid:  { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+  border:{ color: 'rgba(255,255,255,0.06)' },
 }
 
 export const baseChartOptions = {
   responsive: true,
   maintainAspectRatio: true,
-  animation: { duration: 400 },
-  plugins: {
-    legend: {
-      labels: {
-        color: '#7878a0',
-        font: { family: "'Space Mono', monospace", size: 11 },
-        boxWidth: 10,
-        padding: 16,
-      },
-    },
-    tooltip: {
-      backgroundColor: '#11111e',
-      borderColor: '#1e1e35',
-      borderWidth: 1,
-      titleColor: '#e2e2f0',
-      bodyColor: '#7878a0',
-      titleFont: { family: "'Syne', sans-serif", size: 12, weight: '700' },
-      bodyFont: { family: "'Space Mono', monospace", size: 11 },
-      padding: 10,
-      cornerRadius: 8,
-    },
-  },
-  scales: {
-    x: {
-      ticks: { color: '#7878a0', font: { family: "'Space Mono', monospace", size: 10 } },
-      grid: { color: 'rgba(30,30,53,0.8)' },
-      border: { color: '#1e1e35' },
-    },
-    y: {
-      ticks: { color: '#7878a0', font: { family: "'Space Mono', monospace", size: 10 } },
-      grid: { color: 'rgba(30,30,53,0.8)' },
-      border: { color: '#1e1e35' },
-    },
-  },
+  animation: { duration: 500, easing: 'easeInOutQuart' },
+  plugins: { legend: LEG, tooltip: TIP },
+  scales: { x: AXIS_X, y: AXIS_Y },
 }
 
 export const noAxesOptions = {
   responsive: true,
   maintainAspectRatio: true,
-  animation: { duration: 400 },
-  plugins: {
-    legend: {
-      labels: {
-        color: '#7878a0',
-        font: { family: "'Space Mono', monospace", size: 11 },
-        boxWidth: 10,
-        padding: 16,
-      },
-    },
-    tooltip: {
-      backgroundColor: '#11111e',
-      borderColor: '#1e1e35',
-      borderWidth: 1,
-      titleColor: '#e2e2f0',
-      bodyColor: '#7878a0',
-      titleFont: { family: "'Syne', sans-serif", size: 12, weight: '700' },
-      bodyFont: { family: "'Space Mono', monospace", size: 11 },
-      padding: 10,
-      cornerRadius: 8,
-    },
-  },
+  animation: { duration: 500, easing: 'easeInOutQuart' },
+  plugins: { legend: LEG, tooltip: TIP },
 }
 
 export const BUCKET_COLORS = {
