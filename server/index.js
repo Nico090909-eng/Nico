@@ -6,9 +6,21 @@ const path = require('path')
 const app = express()
 const PORT = 3001
 
-const DATA_DIR = path.join(__dirname, '../data')
+const DATA_DIR      = path.join(__dirname, '../data')
 const PORTFOLIO_FILE = path.join(DATA_DIR, 'portfolio.json')
-const EXPENSES_FILE = path.join(DATA_DIR, 'expenses.json')
+const EXPENSES_FILE  = path.join(DATA_DIR, 'expenses.json')
+const PORTFOLIO_SEED = path.join(DATA_DIR, 'portfolio.seed.json')
+const EXPENSES_SEED  = path.join(DATA_DIR, 'expenses.seed.json')
+
+// Auto-create data files from seeds on first run
+if (!fs.existsSync(PORTFOLIO_FILE)) {
+  fs.copyFileSync(PORTFOLIO_SEED, PORTFOLIO_FILE)
+  console.log('Created portfolio.json from seed')
+}
+if (!fs.existsSync(EXPENSES_FILE)) {
+  fs.copyFileSync(EXPENSES_SEED, EXPENSES_FILE)
+  console.log('Created expenses.json from seed')
+}
 
 app.use(cors())
 app.use(express.json())
