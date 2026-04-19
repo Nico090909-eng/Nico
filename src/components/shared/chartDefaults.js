@@ -72,7 +72,17 @@ export const BUCKET_COLORS = {
   equities: '#00d4ff',
   gold: '#ffd94a',
   crypto: '#a066ff',
+  savings: '#00e87a',
 }
+
+export const BUCKET_META = {
+  equities: { label: 'Actions',  emoji: '📈', colorVar: 'var(--accent)' },
+  gold:     { label: 'Or',       emoji: '🥇', colorVar: 'var(--gold)'   },
+  crypto:   { label: 'Crypto',   emoji: '₿',  colorVar: 'var(--purple)' },
+  savings:  { label: 'Épargne',  emoji: '🏦', colorVar: 'var(--green)'  },
+}
+
+export const BUCKET_ORDER = ['equities', 'gold', 'crypto', 'savings']
 
 export const CATEGORY_COLORS = [
   '#00d4ff', '#ffd94a', '#a066ff', '#00e87a', '#ff8c42',

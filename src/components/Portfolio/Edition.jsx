@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react'
-import { fmtEur } from '../shared/chartDefaults'
+import { fmtEur, BUCKET_ORDER, BUCKET_META } from '../shared/chartDefaults'
 
-const BUCKETS = ['equities', 'gold', 'crypto']
-const BUCKET_LABELS = { equities: 'Actions', gold: 'Or', crypto: 'Crypto' }
-const TYPES = ['Stock', 'ETF', 'Coin', 'Crypto', 'Stablecoin', 'Autre']
+const BUCKETS = BUCKET_ORDER
+const BUCKET_LABELS = Object.fromEntries(BUCKET_ORDER.map(k => [k, BUCKET_META[k].label]))
+const TYPES = ['Stock', 'ETF', 'Coin', 'Crypto', 'Stablecoin', 'Savings', 'Cash', 'Autre']
 
 const NEW_POSITION_DEFAULTS = {
   ticker: '',

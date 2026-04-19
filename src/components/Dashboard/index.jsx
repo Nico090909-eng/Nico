@@ -7,17 +7,18 @@ import {
 } from 'chart.js'
 import { Doughnut, Line, Bar } from 'react-chartjs-2'
 import {
-  baseChartOptions, noAxesOptions, BUCKET_COLORS, CATEGORY_COLORS, CATEGORY_EMOJIS,
+  baseChartOptions, noAxesOptions,
+  BUCKET_COLORS, BUCKET_META, BUCKET_ORDER, CATEGORY_COLORS, CATEGORY_EMOJIS,
   fmtEur, fmtPct, monthLabel, getLast6Months, getCurrentMonthKey, getLastMonthKey, getMonthKey,
 } from '../shared/chartDefaults'
 
 ChartJS.register(ArcElement, LineElement, BarElement, CategoryScale, LinearScale, PointElement, Filler, Tooltip, Legend)
 
-function computeBucketTotals(positions) {
+function computeBuckets(positions) {
   return positions.reduce((acc, p) => {
     acc[p.bucket] = (acc[p.bucket] || 0) + (p.currentValue || 0)
     return acc
-  }, { equities: 0, gold: 0, crypto: 0 })
+  }, { equities: 0, gold: 0, crypto: 0, savings: 0 })
 }
 
 function computeMonthlySpending(entries) {
@@ -43,7 +44,7 @@ export default function Dashboard({ portfolio, expenses }) {
   const entries = expenses?.entries || []
   const income = portfolio?.income || 0
 
-  const buckets = useMemo(() => computeBucketTotals(positions), [positions])
+  const buckets = useMemo(() => computeBuckets(positions), [positions])
   const totalPortfolio = Object.values(buckets).reduce((s, v) => s + v, 0)
 
   const currentMonth = getCurrentMonthKey()
@@ -56,31 +57,31 @@ export default function Dashboard({ portfolio, expenses }) {
   const netSavings = income > 0 ? income - currentSpend : null
 
   const catTotals = useMemo(() => computeCategoryTotals(entries, currentMonth), [entries, currentMonth])
-  const top3 = Object.entries(catTotals)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
+  const top3 = Object.entries(catTotals).sort((a, b) => b[1] - a[1]).slice(0, 3)
 
   const last6 = getLast6Months()
 
-  // Allocation donut
+  // Allocation donut — 4 buckets
+  const donutLabels = BUCKET_ORDER.map(k => BUCKET_META[k].label)
+  const donutValues = BUCKET_ORDER.map(k => buckets[k] || 0)
+  const donutColors = BUCKET_ORDER.map(k => BUCKET_COLORS[k])
+
   const donutData = {
-    labels: ['Actions', 'Or', 'Crypto'],
+    labels: donutLabels,
     datasets: [{
-      data: [buckets.equities, buckets.gold, buckets.crypto],
-      backgroundColor: [BUCKET_COLORS.equities, BUCKET_COLORS.gold, BUCKET_COLORS.crypto],
+      data: donutValues,
+      backgroundColor: donutColors,
       borderColor: '#11111e',
       borderWidth: 3,
     }],
   }
 
   // Portfolio evolution line
-  const snapshotLabels = snapshots.map(s => monthLabel(s.date))
-  const snapshotValues = snapshots.map(s => s.totalValue)
   const portfolioLineData = {
-    labels: snapshotLabels.length ? snapshotLabels : ['—'],
+    labels: snapshots.map(s => monthLabel(s.date)),
     datasets: [{
-      label: 'Portfolio',
-      data: snapshotValues.length ? snapshotValues : [0],
+      label: 'Patrimoine',
+      data: snapshots.map(s => s.totalValue),
       borderColor: BUCKET_COLORS.equities,
       backgroundColor: 'rgba(0,212,255,0.07)',
       fill: true,
@@ -116,25 +117,18 @@ export default function Dashboard({ portfolio, expenses }) {
     }],
   }
 
+  const euroTooltip = ctx => fmtEur(ctx.raw)
+
   const lineOpts = {
     ...baseChartOptions,
     plugins: {
       ...baseChartOptions.plugins,
       legend: { display: false },
-      tooltip: {
-        ...baseChartOptions.plugins.tooltip,
-        callbacks: { label: ctx => fmtEur(ctx.raw) },
-      },
+      tooltip: { ...baseChartOptions.plugins.tooltip, callbacks: { label: ctx => fmtEur(ctx.raw) } },
     },
     scales: {
       x: { ...baseChartOptions.scales.x },
-      y: {
-        ...baseChartOptions.scales.y,
-        ticks: {
-          ...baseChartOptions.scales.y.ticks,
-          callback: v => fmtEur(v),
-        },
-      },
+      y: { ...baseChartOptions.scales.y, ticks: { ...baseChartOptions.scales.y.ticks, callback: v => fmtEur(v) } },
     },
   }
 
@@ -144,16 +138,10 @@ export default function Dashboard({ portfolio, expenses }) {
     plugins: {
       ...baseChartOptions.plugins,
       legend: { display: false },
-      tooltip: {
-        ...baseChartOptions.plugins.tooltip,
-        callbacks: { label: ctx => fmtEur(ctx.raw) },
-      },
+      tooltip: { ...baseChartOptions.plugins.tooltip, callbacks: { label: ctx => fmtEur(ctx.raw) } },
     },
     scales: {
-      x: {
-        ...baseChartOptions.scales.x,
-        ticks: { ...baseChartOptions.scales.x.ticks, callback: v => fmtEur(v) },
-      },
+      x: { ...baseChartOptions.scales.x, ticks: { ...baseChartOptions.scales.x.ticks, callback: v => fmtEur(v) } },
       y: { ...baseChartOptions.scales.y },
     },
   }
@@ -163,9 +151,9 @@ export default function Dashboard({ portfolio, expenses }) {
       {/* KPI Row */}
       <div className="kpi-grid section">
         <div className="kpi-card">
-          <div className="kpi-label">Valeur nette</div>
+          <div className="kpi-label">Patrimoine total</div>
           <div className="kpi-value text-accent">{fmtEur(totalPortfolio)}</div>
-          <div className="kpi-delta neutral">Portfolio total</div>
+          <div className="kpi-delta neutral">Investissements + épargne</div>
         </div>
         <div className="kpi-card">
           <div className="kpi-label">Dépenses ce mois</div>
@@ -177,39 +165,25 @@ export default function Dashboard({ portfolio, expenses }) {
         {netSavings !== null && (
           <div className="kpi-card">
             <div className="kpi-label">Épargne nette</div>
-            <div className={`kpi-value ${netSavings >= 0 ? 'text-green' : 'text-red'}`}>
-              {fmtEur(netSavings)}
-            </div>
-            <div className="kpi-delta neutral">Ce mois</div>
+            <div className={`kpi-value ${netSavings >= 0 ? 'text-green' : 'text-red'}`}>{fmtEur(netSavings)}</div>
+            <div className="kpi-delta neutral">Ce mois · salaire {fmtEur(income)}</div>
           </div>
         )}
-        <div className="kpi-card">
-          <div className="kpi-label">Actions</div>
-          <div className="kpi-value text-accent">{fmtEur(buckets.equities)}</div>
-          <div className="kpi-delta neutral">
-            {totalPortfolio > 0 ? fmtPct(buckets.equities / totalPortfolio * 100).replace('+', '') : '—'}
+        {BUCKET_ORDER.map(b => (
+          <div key={b} className="kpi-card">
+            <div className="kpi-label">{BUCKET_META[b].emoji} {BUCKET_META[b].label}</div>
+            <div className="kpi-value" style={{ color: BUCKET_COLORS[b] }}>{fmtEur(buckets[b] || 0)}</div>
+            <div className="kpi-delta neutral">
+              {totalPortfolio > 0 ? ((buckets[b] || 0) / totalPortfolio * 100).toFixed(1) : '0'}%
+            </div>
           </div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-label">Or</div>
-          <div className="kpi-value text-gold">{fmtEur(buckets.gold)}</div>
-          <div className="kpi-delta neutral">
-            {totalPortfolio > 0 ? fmtPct(buckets.gold / totalPortfolio * 100).replace('+', '') : '—'}
-          </div>
-        </div>
-        <div className="kpi-card">
-          <div className="kpi-label">Crypto</div>
-          <div className="kpi-value" style={{ color: 'var(--purple)' }}>{fmtEur(buckets.crypto)}</div>
-          <div className="kpi-delta neutral">
-            {totalPortfolio > 0 ? fmtPct(buckets.crypto / totalPortfolio * 100).replace('+', '') : '—'}
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Charts Row 1 */}
       <div className="grid-2 section">
         <div className="card">
-          <div className="card-title">Allocation</div>
+          <div className="card-title">Allocation patrimoine</div>
           <div className="chart-wrap" style={{ maxHeight: 260, display: 'flex', justifyContent: 'center' }}>
             <div style={{ width: '100%', maxWidth: 280 }}>
               <Doughnut
@@ -237,12 +211,12 @@ export default function Dashboard({ portfolio, expenses }) {
         </div>
 
         <div className="card">
-          <div className="card-title">Évolution du portfolio</div>
+          <div className="card-title">Évolution patrimoine</div>
           <div className="chart-wrap" style={{ height: 240 }}>
             {snapshots.length === 0 ? (
               <div className="empty-state" style={{ padding: '2rem' }}>
                 <span className="empty-state-icon">📈</span>
-                Ajoutez des snapshots dans l'onglet Portfolio
+                Ajoutez des snapshots dans Portfolio → Performance
               </div>
             ) : (
               <Line data={portfolioLineData} options={{ ...lineOpts, maintainAspectRatio: false }} />

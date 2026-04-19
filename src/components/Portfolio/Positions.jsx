@@ -1,24 +1,18 @@
 import React from 'react'
-import { fmtEur, fmtPct } from '../shared/chartDefaults'
-
-const BUCKET_ORDER = ['equities', 'gold', 'crypto']
-const BUCKET_LABELS = { equities: '📈 Actions', gold: '🥇 Or', crypto: '₿ Crypto' }
+import { BUCKET_ORDER, BUCKET_META, BUCKET_COLORS, fmtEur, fmtPct } from '../shared/chartDefaults'
 
 function TypeBadge({ type }) {
   const cls = {
-    ETF: 'type-etf',
-    Stock: 'type-stock',
-    Crypto: 'type-crypto',
-    Coin: 'type-coin',
-    Stablecoin: 'type-stablecoin',
+    ETF: 'type-etf', Stock: 'type-stock', Crypto: 'type-crypto',
+    Coin: 'type-coin', Stablecoin: 'type-stablecoin',
   }[type] || 'neutral'
   return <span className={`badge ${cls}`}>{type}</span>
 }
 
 function PnlCell({ value, cost }) {
-  const pnl = value - cost
+  const pnl    = value - cost
   const pnlPct = cost > 0 ? (pnl / cost) * 100 : null
-  const cls = pnl >= 0 ? 'text-green' : 'text-red'
+  const cls    = pnl >= 0 ? 'text-green' : 'text-red'
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.1rem' }}>
       <span className={cls} style={{ fontSize: '0.82rem', fontFamily: 'var(--font-mono)' }}>
@@ -54,12 +48,14 @@ export default function Positions({ portfolio }) {
     <div>
       {BUCKET_ORDER.map(bucket => {
         const group = grouped[bucket]
-        if (group.length === 0) return null
+        if (!group || group.length === 0) return null
         const bucketTotal = group.reduce((s, p) => s + (p.currentValue || 0), 0)
         return (
           <div key={bucket} className="section">
             <div className="section-title">
-              {BUCKET_LABELS[bucket]}
+              <span style={{ color: BUCKET_COLORS[bucket] }}>
+                {BUCKET_META[bucket].emoji} {BUCKET_META[bucket].label}
+              </span>
               <span style={{ marginLeft: 'auto', fontSize: '0.82rem', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
                 {fmtEur(bucketTotal)}
               </span>
@@ -80,13 +76,14 @@ export default function Positions({ portfolio }) {
                   <tbody>
                     {group.map(p => (
                       <tr key={p.id}>
-                        <td style={{ fontWeight: 700, color: 'var(--accent)' }}>{p.ticker}</td>
+                        <td style={{ fontWeight: 700, color: BUCKET_COLORS[bucket] }}>{p.ticker}</td>
                         <td style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{p.name}</td>
                         <td><TypeBadge type={p.type} /></td>
                         <td className="num">{fmtEur(p.currentValue)}</td>
                         <td className="num" style={{ color: 'var(--text-secondary)' }}>{fmtEur(p.costBasis)}</td>
                         <td className="num">
-                          <PnlCell value={p.currentValue || 0} cost={p.costBasis || 0} />
+                          {p.type === 'Savings' ? <span style={{ color: 'var(--text-muted)' }}>—</span>
+                            : <PnlCell value={p.currentValue || 0} cost={p.costBasis || 0} />}
                         </td>
                       </tr>
                     ))}
