@@ -261,6 +261,27 @@ function Charts({ entries }) {
     },
   }
 
+  // For horizontal bar (indexAxis:'y'): X = values, Y = category labels — only format X axis
+  const horizBarOpts = {
+    ...baseChartOptions,
+    indexAxis: 'y',
+    plugins: {
+      ...baseChartOptions.plugins,
+      legend: { display: false },
+      tooltip: {
+        ...baseChartOptions.plugins.tooltip,
+        callbacks: { label: ctx => ` ${fmtEur(ctx.raw)}` },
+      },
+    },
+    scales: {
+      x: {
+        ...baseChartOptions.scales.x,
+        ticks: { ...baseChartOptions.scales.x.ticks, callback: v => fmtEur(v) },
+      },
+      y: { ...baseChartOptions.scales.y },
+    },
+  }
+
   const stackedOpts = {
     ...moneyOpts,
     scales: {
@@ -278,7 +299,7 @@ function Charts({ entries }) {
             {catSorted.length === 0 ? (
               <div className="empty-state" style={{ padding: '2rem' }}>Aucune dépense ce mois</div>
             ) : (
-              <Bar data={barData} options={{ ...moneyOpts, indexAxis: 'y', maintainAspectRatio: false }} />
+              <Bar data={barData} options={{ ...horizBarOpts, maintainAspectRatio: false }} />
             )}
           </div>
         </div>

@@ -4,13 +4,18 @@ const fs = require('fs')
 const path = require('path')
 
 const app = express()
-const PORT = 3001
+const PORT = process.env.PORT || 3001
 
 const DATA_DIR      = path.join(__dirname, '../data')
 const PORTFOLIO_FILE = path.join(DATA_DIR, 'portfolio.json')
 const EXPENSES_FILE  = path.join(DATA_DIR, 'expenses.json')
 const PORTFOLIO_SEED = path.join(DATA_DIR, 'portfolio.seed.json')
 const EXPENSES_SEED  = path.join(DATA_DIR, 'expenses.seed.json')
+
+// Ensure data directory exists (needed when a Railway Volume is mounted)
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true })
+}
 
 // Auto-create data files from seeds on first run
 if (!fs.existsSync(PORTFOLIO_FILE)) {
@@ -129,4 +134,13 @@ app.put('/api/expenses/budgets', (req, res) => {
   res.json({ ok: true })
 })
 
-app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`))
+// Serve built frontend in production (after all API routes)
+const DIST_DIR = path.join(__dirname, '../dist')
+if (fs.existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR))
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(DIST_DIR, 'index.html'))
+  })
+}
+
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
