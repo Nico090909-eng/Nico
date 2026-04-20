@@ -2,9 +2,12 @@ const express = require('express')
 const cors = require('cors')
 const fs = require('fs')
 const path = require('path')
+const jwt = require('jsonwebtoken')
 
 const app = express()
 const PORT = process.env.PORT || 3001
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret-change-in-production'
+const PASSWORD_SECRET = process.env.PASSWORD_SECRET || 'admin'
 
 // DATA_DIR can be overridden via env var — used to point to a Railway persistent volume
 const DATA_DIR       = process.env.DATA_DIR || path.join(__dirname, '../data')
@@ -41,14 +44,41 @@ function writeJSON(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2))
 }
 
-// Portfolio routes
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+app.post('/api/auth/login', (req, res) => {
+  const { password } = req.body
+  if (!password || password !== PASSWORD_SECRET) {
+    return res.status(401).json({ error: 'Mot de passe incorrect' })
+  }
+  const token = jwt.sign({ auth: true }, JWT_SECRET, { expiresIn: '30d' })
+  res.json({ token })
+})
+
+function requireAuth(req, res, next) {
+  const header = req.headers.authorization
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Non autorisé' })
+  }
+  try {
+    jwt.verify(header.slice(7), JWT_SECRET)
+    next()
+  } catch {
+    res.status(401).json({ error: 'Token invalide ou expiré' })
+  }
+}
+
+// All routes below this line require a valid JWT
+app.use('/api', requireAuth)
+
+// ── Portfolio routes ──────────────────────────────────────────────────────────
+
 app.get('/api/portfolio', (req, res) => {
   res.json(readJSON(PORTFOLIO_FILE))
 })
 
 app.put('/api/portfolio', (req, res) => {
-  const data = req.body
-  writeJSON(PORTFOLIO_FILE, data)
+  writeJSON(PORTFOLIO_FILE, req.body)
   res.json({ ok: true })
 })
 
@@ -104,7 +134,8 @@ app.put('/api/portfolio/income', (req, res) => {
   res.json({ ok: true })
 })
 
-// Expenses routes
+// ── Expenses routes ───────────────────────────────────────────────────────────
+
 app.get('/api/expenses', (req, res) => {
   res.json(readJSON(EXPENSES_FILE))
 })
@@ -137,7 +168,8 @@ app.put('/api/expenses/budgets', (req, res) => {
   res.json({ ok: true })
 })
 
-// Serve built frontend in production (after all API routes)
+// ── Serve built frontend in production (after all API routes) ─────────────────
+
 const DIST_DIR = path.join(__dirname, '../dist')
 if (fs.existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR))

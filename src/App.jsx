@@ -1,9 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { usePortfolio } from './hooks/usePortfolio'
 import { useExpenses } from './hooks/useExpenses'
 import Dashboard from './components/Dashboard'
 import Portfolio from './components/Portfolio'
 import Expenses from './components/Expenses'
+import LoginPage from './components/LoginPage'
+import { isTokenValid, removeToken } from './lib/auth'
 
 const TABS = [
   { id: 'dashboard', label: 'Vue Globale', icon: '◈' },
@@ -12,7 +14,29 @@ const TABS = [
 ]
 
 export default function App() {
-  const [activeTab, setActiveTab]   = useState('dashboard')
+  const [authenticated, setAuthenticated] = useState(() => isTokenValid())
+  const [activeTab, setActiveTab] = useState('dashboard')
+
+  // Listen for 401 responses from fetchWithAuth
+  useEffect(() => {
+    const handleLogout = () => setAuthenticated(false)
+    window.addEventListener('auth:logout', handleLogout)
+    return () => window.removeEventListener('auth:logout', handleLogout)
+  }, [])
+
+  const handleLogout = () => {
+    removeToken()
+    setAuthenticated(false)
+  }
+
+  if (!authenticated) {
+    return <LoginPage onLogin={() => setAuthenticated(true)} />
+  }
+
+  return <AuthenticatedApp activeTab={activeTab} setActiveTab={setActiveTab} onLogout={handleLogout} />
+}
+
+function AuthenticatedApp({ activeTab, setActiveTab, onLogout }) {
   const portfolioHook = usePortfolio()
   const expensesHook  = useExpenses()
 
@@ -37,6 +61,14 @@ export default function App() {
               </button>
             ))}
           </nav>
+          <button
+            onClick={onLogout}
+            className="btn btn-ghost btn-sm"
+            title="Déconnexion"
+            style={{ marginLeft: 'auto', flexShrink: 0, fontSize: '0.72rem', color: 'var(--text-secondary)' }}
+          >
+            Déconnexion
+          </button>
         </div>
       </header>
 

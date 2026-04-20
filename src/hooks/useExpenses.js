@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { fetchWithAuth } from '../lib/auth'
 
 export function useExpenses() {
   const [data, setData] = useState(null)
@@ -7,11 +8,11 @@ export function useExpenses() {
 
   const fetch_ = useCallback(async () => {
     try {
-      const res = await fetch('/api/expenses')
+      const res = await fetchWithAuth('/api/expenses')
       if (!res.ok) throw new Error('Failed to fetch expenses')
       setData(await res.json())
     } catch (e) {
-      setError(e.message)
+      if (e.message !== 'Session expirée') setError(e.message)
     } finally {
       setLoading(false)
     }
@@ -20,9 +21,8 @@ export function useExpenses() {
   useEffect(() => { fetch_() }, [fetch_])
 
   const addEntry = useCallback(async (entry) => {
-    const res = await fetch('/api/expenses/entries', {
+    const res = await fetchWithAuth('/api/expenses/entries', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(entry),
     })
     const added = await res.json()
@@ -31,14 +31,13 @@ export function useExpenses() {
   }, [])
 
   const deleteEntry = useCallback(async (id) => {
-    await fetch(`/api/expenses/entries/${id}`, { method: 'DELETE' })
+    await fetchWithAuth(`/api/expenses/entries/${id}`, { method: 'DELETE' })
     setData(prev => ({ ...prev, entries: prev.entries.filter(e => e.id !== id) }))
   }, [])
 
   const updateBudgets = useCallback(async (budgets) => {
-    await fetch('/api/expenses/budgets', {
+    await fetchWithAuth('/api/expenses/budgets', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ budgets }),
     })
     setData(prev => ({ ...prev, budgets }))
