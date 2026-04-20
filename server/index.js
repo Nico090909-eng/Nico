@@ -6,15 +6,18 @@ const path = require('path')
 const app = express()
 const PORT = process.env.PORT || 3001
 
-const DATA_DIR      = path.join(__dirname, '../data')
+// DATA_DIR can be overridden via env var — used to point to a Railway persistent volume
+const DATA_DIR       = process.env.DATA_DIR || path.join(__dirname, '../data')
+const SEEDS_DIR      = path.join(__dirname, '../data')   // seeds always ship with the code
 const PORTFOLIO_FILE = path.join(DATA_DIR, 'portfolio.json')
 const EXPENSES_FILE  = path.join(DATA_DIR, 'expenses.json')
-const PORTFOLIO_SEED = path.join(DATA_DIR, 'portfolio.seed.json')
-const EXPENSES_SEED  = path.join(DATA_DIR, 'expenses.seed.json')
+const PORTFOLIO_SEED = path.join(SEEDS_DIR, 'portfolio.seed.json')
+const EXPENSES_SEED  = path.join(SEEDS_DIR, 'expenses.seed.json')
 
-// Ensure data directory exists (needed when a Railway Volume is mounted)
+// Ensure data directory exists (critical when a Railway Volume is mounted at a new path)
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true })
+  console.log(`Created data directory: ${DATA_DIR}`)
 }
 
 // Auto-create data files from seeds on first run
