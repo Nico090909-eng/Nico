@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3001
 
 // DATA_DIR can be overridden via env var — used to point to a Railway persistent volume
 const DATA_DIR       = process.env.DATA_DIR || path.join(__dirname, '../data')
-const SEEDS_DIR      = path.join(__dirname, '../data')   // seeds always ship with the code
+const SEEDS_DIR      = path.join(__dirname, 'seeds')     // seeds ship with code, never shadowed by volume
 const PORTFOLIO_FILE = path.join(DATA_DIR, 'portfolio.json')
 const EXPENSES_FILE  = path.join(DATA_DIR, 'expenses.json')
 const PORTFOLIO_SEED = path.join(SEEDS_DIR, 'portfolio.seed.json')
