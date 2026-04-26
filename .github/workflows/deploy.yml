@@ -1,0 +1,17 @@
+name: Deploy Wealth Dashboard
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to GitHub Pages
+        run: echo "Static files already in repo root — served by GitHub Pages"
