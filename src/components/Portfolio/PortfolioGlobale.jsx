@@ -1,49 +1,46 @@
 import React, { useMemo } from 'react'
 import { Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js'
 import { Doughnut, Bar } from 'react-chartjs-2'
-import { BUCKET_COLORS, noAxesOptions, baseChartOptions, fmtEur, fmtPct } from '../shared/chartDefaults'
+import {
+  BUCKET_COLORS, BUCKET_META, BUCKET_ORDER,
+  noAxesOptions, baseChartOptions, fmtEur, fmtPct,
+} from '../shared/chartDefaults'
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend)
 
-const BUCKET_LABELS = { equities: 'Actions', gold: 'Or', crypto: 'Crypto' }
-
-export default function PortfolioGlobale({ portfolio }) {
+export default function PortfolioGlobale({ portfolio, onBucketClick }) {
   const positions = portfolio?.positions || []
 
-  const buckets = useMemo(() => {
-    return positions.reduce((acc, p) => {
-      acc[p.bucket] = (acc[p.bucket] || 0) + (p.currentValue || 0)
-      return acc
-    }, { equities: 0, gold: 0, crypto: 0 })
-  }, [positions])
+  const buckets = useMemo(() => positions.reduce((acc, p) => {
+    acc[p.bucket] = (acc[p.bucket] || 0) + (p.currentValue || 0)
+    return acc
+  }, { equities: 0, gold: 0, crypto: 0, savings: 0 }), [positions])
 
-  const costBuckets = useMemo(() => {
-    return positions.reduce((acc, p) => {
-      acc[p.bucket] = (acc[p.bucket] || 0) + (p.costBasis || 0)
-      return acc
-    }, { equities: 0, gold: 0, crypto: 0 })
-  }, [positions])
+  const costBuckets = useMemo(() => positions.reduce((acc, p) => {
+    acc[p.bucket] = (acc[p.bucket] || 0) + (p.costBasis || 0)
+    return acc
+  }, { equities: 0, gold: 0, crypto: 0, savings: 0 }), [positions])
 
   const totalValue = Object.values(buckets).reduce((s, v) => s + v, 0)
-  const totalCost = Object.values(costBuckets).reduce((s, v) => s + v, 0)
-  const totalPnl = totalValue - totalCost
+  const totalCost  = Object.values(costBuckets).reduce((s, v) => s + v, 0)
+  const totalPnl   = totalValue - totalCost
   const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0
 
   const donutData = {
-    labels: ['Actions', 'Or', 'Crypto'],
+    labels: BUCKET_ORDER.map(k => BUCKET_META[k].label),
     datasets: [{
-      data: [buckets.equities, buckets.gold, buckets.crypto],
-      backgroundColor: [BUCKET_COLORS.equities, BUCKET_COLORS.gold, BUCKET_COLORS.crypto],
+      data: BUCKET_ORDER.map(k => buckets[k] || 0),
+      backgroundColor: BUCKET_ORDER.map(k => BUCKET_COLORS[k]),
       borderColor: '#11111e',
       borderWidth: 3,
     }],
   }
 
   const barData = {
-    labels: Object.entries(BUCKET_LABELS).map(([k, v]) => v),
+    labels: BUCKET_ORDER.map(k => BUCKET_META[k].label),
     datasets: [{
-      data: [buckets.equities, buckets.gold, buckets.crypto],
-      backgroundColor: [BUCKET_COLORS.equities, BUCKET_COLORS.gold, BUCKET_COLORS.crypto],
+      data: BUCKET_ORDER.map(k => buckets[k] || 0),
+      backgroundColor: BUCKET_ORDER.map(k => BUCKET_COLORS[k]),
       borderRadius: 4,
     }],
   }
@@ -53,17 +50,11 @@ export default function PortfolioGlobale({ portfolio }) {
     plugins: {
       ...baseChartOptions.plugins,
       legend: { display: false },
-      tooltip: {
-        ...baseChartOptions.plugins.tooltip,
-        callbacks: { label: ctx => fmtEur(ctx.raw) },
-      },
+      tooltip: { ...baseChartOptions.plugins.tooltip, callbacks: { label: ctx => fmtEur(ctx.raw) } },
     },
     scales: {
       x: { ...baseChartOptions.scales.x },
-      y: {
-        ...baseChartOptions.scales.y,
-        ticks: { ...baseChartOptions.scales.y.ticks, callback: v => fmtEur(v) },
-      },
+      y: { ...baseChartOptions.scales.y, ticks: { ...baseChartOptions.scales.y.ticks, callback: v => fmtEur(v) } },
     },
   }
 
@@ -76,43 +67,41 @@ export default function PortfolioGlobale({ portfolio }) {
           <div className="kpi-value text-accent">{fmtEur(totalValue)}</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-label">P&L total</div>
+          <div className="kpi-label">P&L investissements</div>
           <div className={`kpi-value ${totalPnl >= 0 ? 'text-green' : 'text-red'}`}>{fmtEur(totalPnl)}</div>
           <div className={`kpi-delta ${totalPnl >= 0 ? 'positive' : 'negative'}`}>
             {totalPnl >= 0 ? '↑' : '↓'} {fmtPct(totalPnlPct)}
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-label">PRU total</div>
+          <div className="kpi-label">Coût total (PRU)</div>
           <div className="kpi-value">{fmtEur(totalCost)}</div>
         </div>
       </div>
 
-      {/* Allocation */}
+      {/* Allocation bar */}
       <div className="section">
         <div className="section-title">Allocation</div>
         <div className="card" style={{ marginBottom: '0.75rem' }}>
           <div className="alloc-bar" style={{ height: 12 }}>
-            {['equities', 'gold', 'crypto'].map(b => (
+            {BUCKET_ORDER.map(b => (
               <div
                 key={b}
-                className={`alloc-seg bg-${b}`}
-                style={{ flex: totalValue > 0 ? buckets[b] / totalValue : 0 }}
+                className="alloc-seg"
+                style={{ flex: totalValue > 0 ? (buckets[b] || 0) / totalValue : 0, background: BUCKET_COLORS[b] }}
               />
             ))}
           </div>
-          <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-            {['equities', 'gold', 'crypto'].map(b => (
+          <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+            {BUCKET_ORDER.map(b => (
               <div key={b} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: BUCKET_COLORS[b] }} />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-heading)' }}>
-                  {BUCKET_LABELS[b]}
+                  {BUCKET_META[b].label}
                 </span>
-                <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
-                  {fmtEur(buckets[b])}
-                </span>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                  {totalValue > 0 ? `(${((buckets[b] / totalValue) * 100).toFixed(1)}%)` : ''}
+                <span style={{ fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>{fmtEur(buckets[b] || 0)}</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  {totalValue > 0 ? `(${(((buckets[b] || 0) / totalValue) * 100).toFixed(1)}%)` : ''}
                 </span>
               </div>
             ))}
@@ -156,32 +145,49 @@ export default function PortfolioGlobale({ portfolio }) {
         </div>
       </div>
 
-      {/* Bucket cards */}
+      {/* Bucket cards — clickable → Positions */}
       <div className="section">
-        <div className="section-title">Buckets</div>
+        <div className="section-title">Détail par bucket <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>— cliquez pour voir les positions</span></div>
         <div className="grid-3">
-          {[
-            { key: 'equities', label: 'Actions', color: 'var(--accent)' },
-            { key: 'gold', label: 'Or', color: 'var(--gold)' },
-            { key: 'crypto', label: 'Crypto', color: 'var(--purple)' },
-          ].map(({ key, label, color }) => {
-            const val = buckets[key]
-            const cost = costBuckets[key]
-            const pnl = val - cost
-            const pnlPct = cost > 0 ? (pnl / cost) * 100 : 0
-            const pct = totalValue > 0 ? (val / totalValue) * 100 : 0
+          {BUCKET_ORDER.map(key => {
+            const val  = buckets[key] || 0
+            const cost = costBuckets[key] || 0
+            const pnl  = val - cost
+            const pnlPct  = cost > 0 ? (pnl / cost) * 100 : 0
+            const pct     = totalValue > 0 ? (val / totalValue) * 100 : 0
+            const isSavings = key === 'savings'
             return (
-              <div key={key} className="card" style={{ borderLeft: `3px solid ${color}` }}>
-                <div className="card-title" style={{ color }}>{label}</div>
+              <div
+                key={key}
+                className="card"
+                onClick={() => onBucketClick?.(key)}
+                style={{
+                  borderLeft: `3px solid ${BUCKET_COLORS[key]}`,
+                  cursor: 'pointer',
+                  transition: 'transform 0.15s, box-shadow 0.15s, border-color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 6px 24px ${BUCKET_COLORS[key]}22` }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <div className="card-title" style={{ color: BUCKET_COLORS[key], marginBottom: 0 }}>
+                    {BUCKET_META[key].emoji} {BUCKET_META[key].label}
+                  </div>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', fontWeight: 600 }}>
+                    Voir →
+                  </span>
+                </div>
                 <div style={{ fontSize: '1.4rem', fontWeight: 700, fontFamily: 'var(--font-mono)', marginBottom: '0.25rem' }}>
                   {fmtEur(val)}
                 </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
                   {pct.toFixed(1)}% du total
                 </div>
-                <div className={`badge ${pnl >= 0 ? 'positive' : 'negative'}`}>
-                  {pnl >= 0 ? '↑' : '↓'} {fmtEur(pnl)} ({fmtPct(pnlPct)})
-                </div>
+                {!isSavings && (
+                  <div className={`badge ${pnl >= 0 ? 'positive' : 'negative'}`}>
+                    {pnl >= 0 ? '↑' : '↓'} {fmtEur(pnl)} ({fmtPct(pnlPct)})
+                  </div>
+                )}
               </div>
             )
           })}

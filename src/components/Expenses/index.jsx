@@ -261,6 +261,27 @@ function Charts({ entries }) {
     },
   }
 
+  // For horizontal bar (indexAxis:'y'): X = values, Y = category labels — only format X axis
+  const horizBarOpts = {
+    ...baseChartOptions,
+    indexAxis: 'y',
+    plugins: {
+      ...baseChartOptions.plugins,
+      legend: { display: false },
+      tooltip: {
+        ...baseChartOptions.plugins.tooltip,
+        callbacks: { label: ctx => ` ${fmtEur(ctx.raw)}` },
+      },
+    },
+    scales: {
+      x: {
+        ...baseChartOptions.scales.x,
+        ticks: { ...baseChartOptions.scales.x.ticks, callback: v => fmtEur(v) },
+      },
+      y: { ...baseChartOptions.scales.y },
+    },
+  }
+
   const stackedOpts = {
     ...moneyOpts,
     scales: {
@@ -278,7 +299,7 @@ function Charts({ entries }) {
             {catSorted.length === 0 ? (
               <div className="empty-state" style={{ padding: '2rem' }}>Aucune dépense ce mois</div>
             ) : (
-              <Bar data={barData} options={{ ...moneyOpts, indexAxis: 'y', maintainAspectRatio: false }} />
+              <Bar data={barData} options={{ ...horizBarOpts, maintainAspectRatio: false }} />
             )}
           </div>
         </div>
@@ -462,7 +483,8 @@ export default function Expenses({ expenses, addEntry, deleteEntry, updateBudget
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+      {/* Header row: sub-tabs + desktop add button */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0' }}>
         <div className="sub-tabs" style={{ flex: 1, marginBottom: 0, borderBottom: 'none' }}>
           {SUB_TABS.map(t => (
             <button
@@ -474,16 +496,52 @@ export default function Expenses({ expenses, addEntry, deleteEntry, updateBudget
             </button>
           ))}
         </div>
-        <button className="btn btn-primary btn-sm" style={{ marginLeft: '1rem' }} onClick={() => setShowModal(true)}>
+        {/* Desktop add button */}
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={() => setShowModal(true)}
+          style={{ flexShrink: 0 }}
+        >
           + Dépense
         </button>
       </div>
       <div style={{ borderBottom: '1px solid var(--border)', marginBottom: '1.5rem' }} />
 
       {sub === 'summary' && <Summary entries={currentEntries} allEntries={entries} />}
-      {sub === 'charts' && <Charts entries={entries} />}
+      {sub === 'charts'  && <Charts entries={entries} />}
       {sub === 'budgets' && <Budgets expenses={expenses} onUpdateBudgets={updateBudgets} />}
-      {sub === 'list' && <ExpenseList entries={entries} onDelete={deleteEntry} />}
+      {sub === 'list'    && <ExpenseList entries={entries} onDelete={deleteEntry} />}
+
+      {/* Mobile FAB — always visible on phone */}
+      <button
+        onClick={() => setShowModal(true)}
+        style={{
+          display: 'none',
+          position: 'fixed',
+          bottom: 'calc(var(--mobile-nav-h) + env(safe-area-inset-bottom, 0px) + 14px)',
+          right: '16px',
+          width: 56, height: 56,
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg,#00d4ff,#7c4dff)',
+          color: '#fff', border: 'none',
+          fontSize: '1.6rem', fontWeight: 300, lineHeight: 1,
+          boxShadow: '0 4px 20px rgba(0,212,255,0.45)',
+          cursor: 'pointer', zIndex: 150,
+          alignItems: 'center', justifyContent: 'center',
+          WebkitTapHighlightColor: 'transparent',
+          touchAction: 'manipulation',
+        }}
+        className="expense-fab"
+        aria-label="Ajouter une dépense"
+      >
+        +
+      </button>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .expense-fab { display: flex !important; }
+        }
+      `}</style>
 
       {showModal && (
         <AddExpenseModal

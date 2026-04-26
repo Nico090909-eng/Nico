@@ -4,7 +4,10 @@ import {
   PointElement, Tooltip, Legend, Filler,
 } from 'chart.js'
 import { Line, Bar } from 'react-chartjs-2'
-import { BUCKET_COLORS, baseChartOptions, fmtEur, fmtPct, monthLabel } from '../shared/chartDefaults'
+import {
+  BUCKET_COLORS, BUCKET_META, BUCKET_ORDER,
+  baseChartOptions, fmtEur, fmtPct, monthLabel,
+} from '../shared/chartDefaults'
 
 ChartJS.register(LineElement, BarElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend, Filler)
 
@@ -13,16 +16,16 @@ export default function Performance({ portfolio, onAddSnapshot, onDeleteSnapshot
   const snapshots = portfolio?.snapshots || []
 
   const totalValue = positions.reduce((s, p) => s + (p.currentValue || 0), 0)
-  const totalCost = positions.reduce((s, p) => s + (p.costBasis || 0), 0)
-  const totalPnl = totalValue - totalCost
+  const totalCost  = positions.reduce((s, p) => s + (p.costBasis  || 0), 0)
+  const totalPnl   = totalValue - totalCost
   const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0
 
   const bucketValues = positions.reduce((acc, p) => {
     acc[p.bucket] = (acc[p.bucket] || 0) + (p.currentValue || 0)
     return acc
-  }, { equities: 0, gold: 0, crypto: 0 })
+  }, { equities: 0, gold: 0, crypto: 0, savings: 0 })
 
-  const today = new Date().toISOString().split('T')[0].slice(0, 7)
+  const today = new Date().toISOString().slice(0, 7)
   const [snapDate, setSnapDate] = useState(today)
   const [adding, setAdding] = useState(false)
 
@@ -31,7 +34,7 @@ export default function Performance({ portfolio, onAddSnapshot, onDeleteSnapshot
     const last = snapshots[snapshots.length - 1]
     const prev = snapshots[snapshots.length - 2]
     const delta = last.totalValue - prev.totalValue
-    const pct = prev.totalValue > 0 ? (delta / prev.totalValue) * 100 : 0
+    const pct   = prev.totalValue > 0 ? (delta / prev.totalValue) * 100 : 0
     return { delta, pct }
   }, [snapshots])
 
@@ -40,7 +43,7 @@ export default function Performance({ portfolio, onAddSnapshot, onDeleteSnapshot
   const lineData = {
     labels,
     datasets: [{
-      label: 'Total',
+      label: 'Patrimoine total',
       data: snapshots.map(s => s.totalValue),
       borderColor: BUCKET_COLORS.equities,
       backgroundColor: 'rgba(0,212,255,0.07)',
@@ -53,43 +56,23 @@ export default function Performance({ portfolio, onAddSnapshot, onDeleteSnapshot
 
   const stackedBarData = {
     labels,
-    datasets: [
-      {
-        label: 'Actions',
-        data: snapshots.map(s => s.buckets?.equities || 0),
-        backgroundColor: BUCKET_COLORS.equities,
-        stack: 'portfolio',
-      },
-      {
-        label: 'Or',
-        data: snapshots.map(s => s.buckets?.gold || 0),
-        backgroundColor: BUCKET_COLORS.gold,
-        stack: 'portfolio',
-      },
-      {
-        label: 'Crypto',
-        data: snapshots.map(s => s.buckets?.crypto || 0),
-        backgroundColor: BUCKET_COLORS.crypto,
-        stack: 'portfolio',
-      },
-    ],
+    datasets: BUCKET_ORDER.map(b => ({
+      label: BUCKET_META[b].label,
+      data: snapshots.map(s => s.buckets?.[b] || 0),
+      backgroundColor: BUCKET_COLORS[b],
+      stack: 'portfolio',
+    })),
   }
 
   const chartOpts = {
     ...baseChartOptions,
     plugins: {
       ...baseChartOptions.plugins,
-      tooltip: {
-        ...baseChartOptions.plugins.tooltip,
-        callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtEur(ctx.raw)}` },
-      },
+      tooltip: { ...baseChartOptions.plugins.tooltip, callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtEur(ctx.raw)}` } },
     },
     scales: {
       x: { ...baseChartOptions.scales.x },
-      y: {
-        ...baseChartOptions.scales.y,
-        ticks: { ...baseChartOptions.scales.y.ticks, callback: v => fmtEur(v) },
-      },
+      y: { ...baseChartOptions.scales.y, ticks: { ...baseChartOptions.scales.y.ticks, callback: v => fmtEur(v) } },
     },
   }
 
@@ -114,10 +97,10 @@ export default function Performance({ portfolio, onAddSnapshot, onDeleteSnapshot
         </div>
         <div className="kpi-card">
           <div className="kpi-label">Delta MoM</div>
-          <div className={`kpi-value ${momDelta === null ? '' : momDelta.delta >= 0 ? 'text-green' : 'text-red'}`}>
+          <div className={`kpi-value ${!momDelta ? '' : momDelta.delta >= 0 ? 'text-green' : 'text-red'}`}>
             {momDelta ? fmtEur(momDelta.delta) : '—'}
           </div>
-          <div className={`kpi-delta ${momDelta === null ? 'neutral' : momDelta.delta >= 0 ? 'positive' : 'negative'}`}>
+          <div className={`kpi-delta ${!momDelta ? 'neutral' : momDelta.delta >= 0 ? 'positive' : 'negative'}`}>
             {momDelta ? fmtPct(momDelta.pct) : 'Pas assez de snapshots'}
           </div>
         </div>
@@ -136,7 +119,7 @@ export default function Performance({ portfolio, onAddSnapshot, onDeleteSnapshot
       {snapshots.length > 0 && (
         <div className="grid-2 section">
           <div className="card">
-            <div className="card-title">Évolution portfolio</div>
+            <div className="card-title">Évolution patrimoine</div>
             <div style={{ height: 240 }}>
               <Line data={lineData} options={{ ...chartOpts, maintainAspectRatio: false }} />
             </div>
@@ -156,22 +139,17 @@ export default function Performance({ portfolio, onAddSnapshot, onDeleteSnapshot
         <div className="card" style={{ marginBottom: '1rem' }}>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '1rem' }}>
             <div className="form-group">
-              <label className="form-label">Date du snapshot (YYYY-MM)</label>
-              <input
-                type="month"
-                className="form-input"
-                value={snapDate}
-                onChange={e => setSnapDate(e.target.value)}
-                style={{ maxWidth: 200 }}
-              />
+              <label className="form-label">Date (YYYY-MM)</label>
+              <input type="month" className="form-input" value={snapDate} onChange={e => setSnapDate(e.target.value)} style={{ maxWidth: 200 }} />
             </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', paddingBottom: '0.1rem' }}>
-              Valeur: <strong style={{ color: 'var(--accent)' }}>{fmtEur(totalValue)}</strong>
-              <br />
-              <span style={{ fontSize: '0.7rem' }}>Actions: {fmtEur(bucketValues.equities)} · Or: {fmtEur(bucketValues.gold)} · Crypto: {fmtEur(bucketValues.crypto)}</span>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', paddingBottom: '0.1rem', lineHeight: 1.7 }}>
+              Total: <strong style={{ color: 'var(--accent)' }}>{fmtEur(totalValue)}</strong><br />
+              <span style={{ fontSize: '0.7rem' }}>
+                {BUCKET_ORDER.map(b => `${BUCKET_META[b].emoji} ${fmtEur(bucketValues[b] || 0)}`).join(' · ')}
+              </span>
             </div>
             <button className="btn btn-primary btn-sm" onClick={handleAddSnapshot} disabled={adding}>
-              {adding ? 'Ajout…' : '+ Ajouter snapshot'}
+              {adding ? 'Ajout…' : '+ Snapshot'}
             </button>
           </div>
         </div>
@@ -179,36 +157,36 @@ export default function Performance({ portfolio, onAddSnapshot, onDeleteSnapshot
         {snapshots.length === 0 ? (
           <div className="empty-state">
             <span className="empty-state-icon">📸</span>
-            Aucun snapshot. Ajoutez-en un pour commencer le suivi.
+            Aucun snapshot enregistré.
           </div>
         ) : (
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th className="num">Valeur totale</th>
-                  <th className="num">Actions</th>
-                  <th className="num">Or</th>
-                  <th className="num">Crypto</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...snapshots].reverse().map(s => (
-                  <tr key={s.date}>
-                    <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{s.date}</td>
-                    <td className="num" style={{ fontWeight: 700 }}>{fmtEur(s.totalValue)}</td>
-                    <td className="num">{fmtEur(s.buckets?.equities)}</td>
-                    <td className="num">{fmtEur(s.buckets?.gold)}</td>
-                    <td className="num">{fmtEur(s.buckets?.crypto)}</td>
-                    <td>
-                      <button className="btn btn-ghost btn-sm" onClick={() => onDeleteSnapshot(s.date)} title="Supprimer">✕</button>
-                    </td>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th className="num">Total</th>
+                    {BUCKET_ORDER.map(b => <th key={b} className="num">{BUCKET_META[b].emoji} {BUCKET_META[b].label}</th>)}
+                    <th></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {[...snapshots].reverse().map(s => (
+                    <tr key={s.date}>
+                      <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>{s.date}</td>
+                      <td className="num" style={{ fontWeight: 700 }}>{fmtEur(s.totalValue)}</td>
+                      {BUCKET_ORDER.map(b => (
+                        <td key={b} className="num" style={{ color: BUCKET_COLORS[b] }}>{fmtEur(s.buckets?.[b] || 0)}</td>
+                      ))}
+                      <td>
+                        <button className="btn btn-ghost btn-sm" onClick={() => onDeleteSnapshot(s.date)}>✕</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

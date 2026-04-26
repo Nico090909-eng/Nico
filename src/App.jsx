@@ -1,22 +1,47 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { usePortfolio } from './hooks/usePortfolio'
 import { useExpenses } from './hooks/useExpenses'
 import Dashboard from './components/Dashboard'
 import Portfolio from './components/Portfolio'
 import Expenses from './components/Expenses'
+import LoginPage from './components/LoginPage'
+import { isTokenValid, removeToken } from './lib/auth'
 
 const TABS = [
-  { id: 'dashboard', label: 'Vue Globale' },
-  { id: 'portfolio', label: 'Portfolio' },
-  { id: 'expenses', label: 'Dépenses' },
+  { id: 'dashboard', label: 'Vue Globale', icon: '◈' },
+  { id: 'portfolio', label: 'Portfolio',   icon: '📈' },
+  { id: 'expenses',  label: 'Dépenses',    icon: '💳' },
 ]
 
 export default function App() {
+  const [authenticated, setAuthenticated] = useState(() => isTokenValid())
   const [activeTab, setActiveTab] = useState('dashboard')
+
+  // Listen for 401 responses from fetchWithAuth
+  useEffect(() => {
+    const handleLogout = () => setAuthenticated(false)
+    window.addEventListener('auth:logout', handleLogout)
+    return () => window.removeEventListener('auth:logout', handleLogout)
+  }, [])
+
+  const handleLogout = () => {
+    removeToken()
+    setAuthenticated(false)
+  }
+
+  if (!authenticated) {
+    return <LoginPage onLogin={() => setAuthenticated(true)} />
+  }
+
+  return <AuthenticatedApp activeTab={activeTab} setActiveTab={setActiveTab} onLogout={handleLogout} />
+}
+
+function AuthenticatedApp({ activeTab, setActiveTab, onLogout }) {
   const portfolioHook = usePortfolio()
-  const expensesHook = useExpenses()
+  const expensesHook  = useExpenses()
 
   const loading = portfolioHook.loading || expensesHook.loading
+  const error   = portfolioHook.error   || expensesHook.error
 
   return (
     <>
@@ -36,32 +61,73 @@ export default function App() {
               </button>
             ))}
           </nav>
+          <button
+            onClick={onLogout}
+            className="btn btn-ghost btn-sm"
+            title="Déconnexion"
+            style={{ marginLeft: 'auto', flexShrink: 0, fontSize: '0.72rem', color: 'var(--text-secondary)' }}
+          >
+            Déconnexion
+          </button>
         </div>
       </header>
 
       <main className="app-main" role="tabpanel">
         {loading ? (
           <div className="empty-state">
-            <span className="empty-state-icon">⟳</span>
-            Chargement…
+            <span className="empty-state-icon" style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
+            <br />Chargement…
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        ) : error ? (
+          <div style={{
+            maxWidth: 500, margin: '4rem auto', padding: '2rem',
+            background: 'var(--bg-card-solid)', border: '1px solid var(--red)',
+            borderRadius: 'var(--r-lg)', boxShadow: '0 0 30px rgba(255,61,90,0.1)',
+          }}>
+            <div style={{ color: 'var(--red)', fontFamily: 'var(--font-h)', fontWeight: 700, fontSize: '1rem', marginBottom: '1rem' }}>
+              ⚠ Serveur API inaccessible
+            </div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-2)', lineHeight: 1.9 }}>
+              Le backend Express (port 3001) ne répond pas.<br />
+              <strong style={{ color: 'var(--text-1)' }}>Lance l'app avec :</strong><br />
+              <code style={{
+                background: 'var(--bg-0)', padding: '0.5rem 0.875rem',
+                borderRadius: 6, display: 'block', margin: '0.5rem 0',
+                color: 'var(--accent)', border: '1px solid var(--border)',
+              }}>npm run dev</code>
+            </div>
+            <div style={{ marginTop: '0.75rem', fontSize: '0.7rem', color: 'var(--text-3)', fontFamily: 'var(--font-m)' }}>
+              {error}
+            </div>
           </div>
         ) : (
           <>
             {activeTab === 'dashboard' && (
-              <Dashboard
-                portfolio={portfolioHook.portfolio}
-                expenses={expensesHook.expenses}
-              />
+              <Dashboard portfolio={portfolioHook.portfolio} expenses={expensesHook.expenses} />
             )}
-            {activeTab === 'portfolio' && (
-              <Portfolio {...portfolioHook} />
-            )}
-            {activeTab === 'expenses' && (
-              <Expenses {...expensesHook} />
-            )}
+            {activeTab === 'portfolio' && <Portfolio {...portfolioHook} />}
+            {activeTab === 'expenses'  && <Expenses  {...expensesHook}  />}
           </>
         )}
       </main>
+
+      {/* Mobile bottom navigation */}
+      <nav className="mobile-nav" role="navigation" aria-label="Navigation principale">
+        <div className="mobile-nav-inner">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              className={`mobile-nav-btn${activeTab === tab.id ? ' active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+              aria-label={tab.label}
+            >
+              <span className="mobile-nav-icon">{tab.icon}</span>
+              <span className="mobile-nav-label">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
     </>
   )
 }

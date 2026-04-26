@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { fetchWithAuth } from '../lib/auth'
 
 export function usePortfolio() {
   const [data, setData] = useState(null)
@@ -7,11 +8,11 @@ export function usePortfolio() {
 
   const fetch_ = useCallback(async () => {
     try {
-      const res = await fetch('/api/portfolio')
+      const res = await fetchWithAuth('/api/portfolio')
       if (!res.ok) throw new Error('Failed to fetch portfolio')
       setData(await res.json())
     } catch (e) {
-      setError(e.message)
+      if (e.message !== 'Session expirée') setError(e.message)
     } finally {
       setLoading(false)
     }
@@ -20,18 +21,16 @@ export function usePortfolio() {
   useEffect(() => { fetch_() }, [fetch_])
 
   const saveAll = useCallback(async (updated) => {
-    await fetch('/api/portfolio', {
+    await fetchWithAuth('/api/portfolio', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updated),
     })
     setData(updated)
   }, [])
 
   const addPosition = useCallback(async (position) => {
-    const res = await fetch('/api/portfolio/positions', {
+    const res = await fetchWithAuth('/api/portfolio/positions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(position),
     })
     const added = await res.json()
@@ -39,9 +38,8 @@ export function usePortfolio() {
   }, [])
 
   const updatePosition = useCallback(async (id, updates) => {
-    await fetch(`/api/portfolio/positions/${id}`, {
+    await fetchWithAuth(`/api/portfolio/positions/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates),
     })
     setData(prev => ({
@@ -51,7 +49,7 @@ export function usePortfolio() {
   }, [])
 
   const deletePosition = useCallback(async (id) => {
-    await fetch(`/api/portfolio/positions/${id}`, { method: 'DELETE' })
+    await fetchWithAuth(`/api/portfolio/positions/${id}`, { method: 'DELETE' })
     setData(prev => ({
       ...prev,
       positions: prev.positions.filter(p => p.id !== id),
@@ -59,16 +57,15 @@ export function usePortfolio() {
   }, [])
 
   const addSnapshot = useCallback(async (snapshot) => {
-    await fetch('/api/portfolio/snapshots', {
+    await fetchWithAuth('/api/portfolio/snapshots', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(snapshot),
     })
     await fetch_()
   }, [fetch_])
 
   const deleteSnapshot = useCallback(async (date) => {
-    await fetch(`/api/portfolio/snapshots/${encodeURIComponent(date)}`, { method: 'DELETE' })
+    await fetchWithAuth(`/api/portfolio/snapshots/${encodeURIComponent(date)}`, { method: 'DELETE' })
     setData(prev => ({
       ...prev,
       snapshots: prev.snapshots.filter(s => s.date !== date),
@@ -76,9 +73,8 @@ export function usePortfolio() {
   }, [])
 
   const setIncome = useCallback(async (income) => {
-    await fetch('/api/portfolio/income', {
+    await fetchWithAuth('/api/portfolio/income', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ income }),
     })
     setData(prev => ({ ...prev, income }))

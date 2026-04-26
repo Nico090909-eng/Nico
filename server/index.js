@@ -2,13 +2,36 @@ const express = require('express')
 const cors = require('cors')
 const fs = require('fs')
 const path = require('path')
+const jwt = require('jsonwebtoken')
 
 const app = express()
-const PORT = 3001
+const PORT = process.env.PORT || 3001
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-jwt-secret-change-in-production'
+const PASSWORD_SECRET = process.env.PASSWORD_SECRET || 'admin'
 
-const DATA_DIR = path.join(__dirname, '../data')
+// DATA_DIR can be overridden via env var — used to point to a Railway persistent volume
+const DATA_DIR       = process.env.DATA_DIR || path.join(__dirname, '../data')
+const SEEDS_DIR      = path.join(__dirname, 'seeds')     // seeds ship with code, never shadowed by volume
 const PORTFOLIO_FILE = path.join(DATA_DIR, 'portfolio.json')
-const EXPENSES_FILE = path.join(DATA_DIR, 'expenses.json')
+const EXPENSES_FILE  = path.join(DATA_DIR, 'expenses.json')
+const PORTFOLIO_SEED = path.join(SEEDS_DIR, 'portfolio.seed.json')
+const EXPENSES_SEED  = path.join(SEEDS_DIR, 'expenses.seed.json')
+
+// Ensure data directory exists (critical when a Railway Volume is mounted at a new path)
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true })
+  console.log(`Created data directory: ${DATA_DIR}`)
+}
+
+// Auto-create data files from seeds on first run
+if (!fs.existsSync(PORTFOLIO_FILE)) {
+  fs.copyFileSync(PORTFOLIO_SEED, PORTFOLIO_FILE)
+  console.log('Created portfolio.json from seed')
+}
+if (!fs.existsSync(EXPENSES_FILE)) {
+  fs.copyFileSync(EXPENSES_SEED, EXPENSES_FILE)
+  console.log('Created expenses.json from seed')
+}
 
 app.use(cors())
 app.use(express.json())
@@ -21,14 +44,41 @@ function writeJSON(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2))
 }
 
-// Portfolio routes
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+app.post('/api/auth/login', (req, res) => {
+  const { password } = req.body
+  if (!password || password !== PASSWORD_SECRET) {
+    return res.status(401).json({ error: 'Mot de passe incorrect' })
+  }
+  const token = jwt.sign({ auth: true }, JWT_SECRET, { expiresIn: '30d' })
+  res.json({ token })
+})
+
+function requireAuth(req, res, next) {
+  const header = req.headers.authorization
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Non autorisé' })
+  }
+  try {
+    jwt.verify(header.slice(7), JWT_SECRET)
+    next()
+  } catch {
+    res.status(401).json({ error: 'Token invalide ou expiré' })
+  }
+}
+
+// All routes below this line require a valid JWT
+app.use('/api', requireAuth)
+
+// ── Portfolio routes ──────────────────────────────────────────────────────────
+
 app.get('/api/portfolio', (req, res) => {
   res.json(readJSON(PORTFOLIO_FILE))
 })
 
 app.put('/api/portfolio', (req, res) => {
-  const data = req.body
-  writeJSON(PORTFOLIO_FILE, data)
+  writeJSON(PORTFOLIO_FILE, req.body)
   res.json({ ok: true })
 })
 
@@ -84,7 +134,8 @@ app.put('/api/portfolio/income', (req, res) => {
   res.json({ ok: true })
 })
 
-// Expenses routes
+// ── Expenses routes ───────────────────────────────────────────────────────────
+
 app.get('/api/expenses', (req, res) => {
   res.json(readJSON(EXPENSES_FILE))
 })
@@ -117,4 +168,14 @@ app.put('/api/expenses/budgets', (req, res) => {
   res.json({ ok: true })
 })
 
-app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`))
+// ── Serve built frontend in production (after all API routes) ─────────────────
+
+const DIST_DIR = path.join(__dirname, '../dist')
+if (fs.existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR))
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(DIST_DIR, 'index.html'))
+  })
+}
+
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
