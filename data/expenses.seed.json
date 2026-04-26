@@ -1,5 +1,83 @@
 {
-  "entries": [],
+  "entries": [
+    {
+      "id": "1776630181775",
+      "amount": 250,
+      "date": "2026-04-02",
+      "category": "Autre",
+      "note": "Volant"
+    },
+    {
+      "id": "1776630348174",
+      "amount": 30.1,
+      "date": "2026-04-19",
+      "category": "Restaurants",
+      "note": "BK"
+    },
+    {
+      "id": "1776630362489",
+      "amount": 10.5,
+      "date": "2026-04-19",
+      "category": "Transport",
+      "note": "Péage"
+    },
+    {
+      "id": "1776630380769",
+      "amount": 66.02,
+      "date": "2026-04-17",
+      "category": "Autre",
+      "note": "Vape"
+    },
+    {
+      "id": "1776630421349",
+      "amount": 63,
+      "date": "2026-04-14",
+      "category": "Vêtements",
+      "note": "Parfums"
+    },
+    {
+      "id": "1776630451520",
+      "amount": 11,
+      "date": "2026-04-10",
+      "category": "Restaurants",
+      "note": "PPL"
+    },
+    {
+      "id": "1776630478662",
+      "amount": 40.18,
+      "date": "2026-04-10",
+      "category": "Autre",
+      "note": "Cadeau Elisa"
+    },
+    {
+      "id": "1776630514196",
+      "amount": 26.9,
+      "date": "2026-04-05",
+      "category": "Divertissement",
+      "note": "Produits voiture"
+    },
+    {
+      "id": "1776630531688",
+      "amount": 102,
+      "date": "2026-04-05",
+      "category": "Restaurants",
+      "note": "Anniversaire Isa"
+    },
+    {
+      "id": "1776630566257",
+      "amount": 22.52,
+      "date": "2026-04-02",
+      "category": "Abonnements",
+      "note": "Syndicat"
+    },
+    {
+      "id": "1776630603964",
+      "amount": 22.38,
+      "date": "2026-04-01",
+      "category": "Courses",
+      "note": ""
+    }
+  ],
   "budgets": {
     "Restaurants": 0,
     "Courses": 0,
